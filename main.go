@@ -48,7 +48,8 @@ func main() {
 
 	// Write the codebase tree to the output file
 	fmt.Fprintln(outputFile, "# Codebase Structure\n")
-	err = printTree(*dirPath, "", ignoreList, outputFile)
+	fmt.Fprintf(outputFile, "%s\n", *dirPath)
+	err = printTree(*dirPath, 0, ignoreList, outputFile)
 	if err != nil {
 		fmt.Println("Error printing codebase tree:", err)
 		return
@@ -66,7 +67,7 @@ func main() {
 }
 
 // printTree recursively walks the directory tree and prints the structure to the output file
-func printTree(dirPath string, indent string, ignoreList []*regexp.Regexp, outputFile *os.File) error {
+func printTree(dirPath string, depth int, ignoreList []*regexp.Regexp, outputFile *os.File) error {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return err
@@ -85,10 +86,14 @@ func printTree(dirPath string, indent string, ignoreList []*regexp.Regexp, outpu
 		if i == len(files) -1 {
 			pipe = "└─"
 		}
+		var indent string = ""
+		if depth > 0 {
+			indent = "│ " + strings.Repeat("  ", depth - 1)
+		}
 
 		if file.IsDir() {
 			fmt.Fprintf(outputFile, "%s%s%s\n", indent, pipe, file.Name())
-			printTree(filePath, indent+"│ ", ignoreList, outputFile)
+			printTree(filePath, depth + 1, ignoreList, outputFile)
 		} else {
 			fmt.Fprintf(outputFile, "%s%s%s\n", indent, pipe, file.Name())
 		}
