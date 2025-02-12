@@ -47,7 +47,7 @@ func main() {
 	defer outputFile.Close()
 
 	// Write the codebase tree to the output file
-	fmt.Fprintln(outputFile, "# Codebase Structure\n")
+	fmt.Fprintln(outputFile, "# Tree View:\n```")
 	fmt.Fprintf(outputFile, "%s\n", *dirPath)
 
 	var depthOpen map[int]bool
@@ -57,9 +57,10 @@ func main() {
 		fmt.Println("Error printing codebase tree:", err)
 		return
 	}
+	fmt.Fprintln(outputFile, "```")
 
 	// Write the code content to the output file
-	fmt.Fprintln(outputFile, "\n# Code Content\n")
+	fmt.Fprintln(outputFile, "\n# Content:\n")
 	err = writeCodeContent(*dirPath, ignoreList, outputFile, *includedPathsFile, *excludedPathsFile)
 	if err != nil {
 		fmt.Println("Error writing code content:", err)
