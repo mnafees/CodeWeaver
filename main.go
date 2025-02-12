@@ -35,7 +35,7 @@ func main() {
 	for i, pattern := range ignoreListString {
 		fmt.Println(ignoreListString[i])
 		ignoreList[i] = regexp.MustCompile(strings.TrimSpace(pattern))
-		
+
 	}
 
 	// Create the output file
@@ -49,7 +49,10 @@ func main() {
 	// Write the codebase tree to the output file
 	fmt.Fprintln(outputFile, "# Codebase Structure\n")
 	fmt.Fprintf(outputFile, "%s\n", *dirPath)
-	err = printTree(*dirPath, 0, ignoreList, outputFile)
+
+	var depthOpen map[int]bool
+	depthOpen = make(map[int]bool)
+	err = printTree(*dirPath, 0, depthOpen, ignoreList, outputFile)
 	if err != nil {
 		fmt.Println("Error printing codebase tree:", err)
 		return
@@ -67,7 +70,7 @@ func main() {
 }
 
 // printTree recursively walks the directory tree and prints the structure to the output file
-func printTree(dirPath string, depth int, ignoreList []*regexp.Regexp, outputFile *os.File) error {
+func printTree(dirPath string, depth int, depthOpen map[int]bool, ignoreList []*regexp.Regexp, outputFile *os.File) error {
 	files, err := os.ReadDir(dirPath)
 	if err != nil {
 		return err
@@ -83,19 +86,27 @@ func printTree(dirPath string, depth int, ignoreList []*regexp.Regexp, outputFil
 		}
 
 		var pipe string = "├─"
-		if i == len(files) -1 {
+		depthOpen[depth] = true
+		if i == len(files)-1 {
 			pipe = "└─"
+			depthOpen[depth] = false
 		}
-		var indent string = ""
+		var indent = []rune("")
 		if depth > 0 {
-			indent = "│ " + strings.Repeat("  ", depth - 1)
+			indent = []rune(strings.Repeat("  ", depth))
+			for j := 0; j < depth; j++ {
+				if depthOpen[j] {
+					indent[j*2] = '│'
+				}
+			}
 		}
 
 		if file.IsDir() {
-			fmt.Fprintf(outputFile, "%s%s%s\n", indent, pipe, file.Name())
-			printTree(filePath, depth + 1, ignoreList, outputFile)
+			fmt.Fprintf(outputFile, "%s%s%s\n", string(indent), pipe, file.Name())
+			printTree(filePath, depth+1, depthOpen, ignoreList, outputFile)
+			depthOpen[depth] = false
 		} else {
-			fmt.Fprintf(outputFile, "%s%s%s\n", indent, pipe, file.Name())
+			fmt.Fprintf(outputFile, "%s%s%s\n", string(indent), pipe, file.Name())
 		}
 	}
 
@@ -168,7 +179,7 @@ func writeCodeContent(dirPath string, ignoreList []*regexp.Regexp, outputFile *o
 
 // shouldIgnore checks if a given path should be ignored based on the ignore patterns
 func shouldIgnore(path string, ignoreList []*regexp.Regexp) bool {
-	if path == "."  {
+	if path == "." {
 		return true
 	}
 	for _, pattern := range ignoreList {
