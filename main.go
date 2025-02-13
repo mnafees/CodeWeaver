@@ -8,7 +8,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
+
+var buildTime = time.Now().Format("2006-01-02 15:04:05")
 
 func main() {
 	// Define command line flags
@@ -17,9 +20,15 @@ func main() {
 	ignorePatterns := flag.String("ignore", `\.git.*`, "Comma-separated list of regular expression patterns that match the paths to be ignored")
 	includedPathsFile := flag.String("included-paths-file", "", "File to save included paths (optional). If provided, the included paths will be saved to the file and not printed to the console.")
 	excludedPathsFile := flag.String("excluded-paths-file", "", "File to save excluded paths (optional). If provided, the excluded paths will be saved to the file and not printed to the console.")
-	showHelp := flag.Bool("help", false, "Show help message")
+	showTimeStamp := flag.Bool("timestamp", false, "Show build date and time and exit")
+	showHelp := flag.Bool("help", false, "Show help message and exit")
 
 	flag.Parse()
+
+	if *showTimeStamp {
+		fmt.Println("Build Date and Time:", buildTime)
+		return
+	}
 
 	// Check if help flag is set or no arguments are provided
 	if *showHelp || len(os.Args) == 1 {
@@ -77,21 +86,26 @@ func printTree(dirPath string, depth int, depthOpen map[int]bool, ignoreList []*
 		return err
 	}
 
-	for i, file := range files {
+	// Filter out ignored files and directories
+	var filteredFiles []fs.DirEntry
+	for _, file := range files {
 		filePath := filepath.Join(dirPath, file.Name())
 		relPath, _ := filepath.Rel(".", filePath)
-
-		// Check if the file/directory should be ignored
-		if shouldIgnore(relPath, ignoreList) {
-			continue
+		if !shouldIgnore(relPath, ignoreList) {
+			filteredFiles = append(filteredFiles, file)
 		}
+	}
+
+	for i, file := range filteredFiles { // Iterate over filtered files
+		filePath := filepath.Join(dirPath, file.Name())
 
 		var pipe string = "├─"
 		depthOpen[depth] = true
-		if i == len(files)-1 {
+		if i == len(filteredFiles)-1 { // Use filteredFiles length
 			pipe = "└─"
 			depthOpen[depth] = false
 		}
+
 		var indent = []rune("")
 		if depth > 0 {
 			indent = []rune(strings.Repeat("  ", depth))

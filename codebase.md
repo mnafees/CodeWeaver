@@ -14,15 +14,14 @@
   │ ├─File at folder 01 I.txt
   │ ├─File at folder 01 II.md
   │ └─File at folder 01 III.csv
-  ├─folder 02
-  │ ├─File at folder 02 I.txt
-  │ ├─File at folder 02 II.md
-  │ ├─File at folder 02 III.csv
-  │ └─folder 02 01
-  │   ├─File at folder 02 01 I.txt
-  │   ├─File at folder 02 01 II.md
-  │   └─File at folder 02 01 III.csv
-  └─folder 03
+  └─folder 02
+    ├─File at folder 02 I.txt
+    ├─File at folder 02 II.md
+    ├─File at folder 02 III.csv
+    └─folder 02 01
+      ├─File at folder 02 01 I.txt
+      ├─File at folder 02 01 II.md
+      └─File at folder 02 01 III.csv
 ```
 
 # Content:
@@ -148,9 +147,9 @@ CodeWeaver is released under the [MIT License](LICENSE). See the `LICENSE` file 
 # mit the symbol table, debug information and the DWARF symbol table by passing -s and -w go build -ldflags="-s -w" .
 go build # -ldflags="-s -w" .
 
-./codeweaver -h
+./CodeWeaver -h
 
-./codeweaver -ignore="\.git.*,.+\.exe,codebase.md,excluded_paths.txt" -excluded-paths-file="excluded_paths.txt"
+./CodeWeaver -ignore="\.git.*,.+\.exe,codebase.md,excluded_paths.txt" -excluded-paths-file="excluded_paths.txt"
 
 # "\.git.*,.+\.exe,.+\.[Ii][Cc][Oo],.+\.[Pp][Nn][Gg],.+\.[Jj][Pp][Ee]?[Gg],.+\.[Mm][Pp][34],.+\.[Aa][Vv][Ii],.+\.[Mm][Oo][Vv],.+\.[Ww][Mm][Aa],.+\.[Pp][Dd][Ff],.+\.[Dd][Oo][Cc][Xx]?,.+\.[Xx][Ll][Ss][Xx]?,.+\.[Pp][Pp][Tt][Xx]?,.+\.[Zz][Ii][Pp],.+\.[Rr][Aa][Rr],.+\.[7][Zz],.+\.[Ii][Ss][Oo],.+\.[Bb][Ii][Nn],.+\.[Dd][Aa][Tt],.+\.[Dd][Mm][Gg],.+\.[Gg][Ii][Ff],.+\.[Tt][Ii][Ff][Ff]?,.+\.[Pp][Ss][Dd],.+\.[Mm][Kk][Vv],.+\.[Ff][Ll][Aa][Cc],.+\.[Oo][Gg][Gg],.+\.[Ww][Ee][Bb][Pp],.+\.[Aa][Vv][Ii][Ff],.+\.[Hh][Ee][Ii][Cc],.+\.[Jj][Xx][Ll]"
 ```
@@ -220,7 +219,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
+
+var buildTime = time.Now().Format("2006-01-02 15:04:05")
 
 func main() {
 	// Define command line flags
@@ -229,9 +231,15 @@ func main() {
 	ignorePatterns := flag.String("ignore", `\.git.*`, "Comma-separated list of regular expression patterns that match the paths to be ignored")
 	includedPathsFile := flag.String("included-paths-file", "", "File to save included paths (optional). If provided, the included paths will be saved to the file and not printed to the console.")
 	excludedPathsFile := flag.String("excluded-paths-file", "", "File to save excluded paths (optional). If provided, the excluded paths will be saved to the file and not printed to the console.")
-	showHelp := flag.Bool("help", false, "Show help message")
+	showTimeStamp := flag.Bool("timestamp", false, "Show build date and time and exit")
+	showHelp := flag.Bool("help", false, "Show help message and exit")
 
 	flag.Parse()
+
+	if *showTimeStamp {
+		fmt.Println("Build Date and Time:", buildTime)
+		return
+	}
 
 	// Check if help flag is set or no arguments are provided
 	if *showHelp || len(os.Args) == 1 {
@@ -289,21 +297,26 @@ func printTree(dirPath string, depth int, depthOpen map[int]bool, ignoreList []*
 		return err
 	}
 
-	for i, file := range files {
+	// Filter out ignored files and directories
+	var filteredFiles []fs.DirEntry
+	for _, file := range files {
 		filePath := filepath.Join(dirPath, file.Name())
 		relPath, _ := filepath.Rel(".", filePath)
-
-		// Check if the file/directory should be ignored
-		if shouldIgnore(relPath, ignoreList) {
-			continue
+		if !shouldIgnore(relPath, ignoreList) {
+			filteredFiles = append(filteredFiles, file)
 		}
+	}
+
+	for i, file := range filteredFiles { // Iterate over filtered files
+		filePath := filepath.Join(dirPath, file.Name())
 
 		var pipe string = "├─"
 		depthOpen[depth] = true
-		if i == len(files)-1 {
+		if i == len(filteredFiles)-1 { // Use filteredFiles length
 			pipe = "└─"
 			depthOpen[depth] = false
 		}
+
 		var indent = []rune("")
 		if depth > 0 {
 			indent = []rune(strings.Repeat("  ", depth))
@@ -427,7 +440,6 @@ func savePathsToFile(filename string, paths []string) error {
 
 	return nil
 }
-
 ```
 
 ## test_root\File at root A.txt
