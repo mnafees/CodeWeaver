@@ -219,10 +219,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 )
 
-var buildTime = time.Now().Format("2006-01-02 15:04:05")
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
 
 func main() {
 	// Define command line flags
@@ -231,13 +234,13 @@ func main() {
 	ignorePatterns := flag.String("ignore", `\.git.*`, "Comma-separated list of regular expression patterns that match the paths to be ignored")
 	includedPathsFile := flag.String("included-paths-file", "", "File to save included paths (optional). If provided, the included paths will be saved to the file and not printed to the console.")
 	excludedPathsFile := flag.String("excluded-paths-file", "", "File to save excluded paths (optional). If provided, the excluded paths will be saved to the file and not printed to the console.")
-	showTimeStamp := flag.Bool("timestamp", false, "Show build date and time and exit")
+	showVersion := flag.Bool("version", false, "Show version and exit")
 	showHelp := flag.Bool("help", false, "Show help message and exit")
 
 	flag.Parse()
 
-	if *showTimeStamp {
-		fmt.Println("Build Date and Time:", buildTime)
+	if *showVersion {
+		fmt.Printf("version %s, commit %s, built at %s", version, commit, date)
 		return
 	}
 
@@ -440,6 +443,7 @@ func savePathsToFile(filename string, paths []string) error {
 
 	return nil
 }
+
 ```
 
 ## test_root\File at root A.txt
