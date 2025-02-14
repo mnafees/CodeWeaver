@@ -10,11 +10,7 @@ import (
 	"strings"
 )
 
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
+var version = "v0.0.8"
 
 func main() {
 	// Define command line flags
@@ -29,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("version %s, commit %s, built at %s", version, commit, date)
+		fmt.Println(version)
 		return
 	}
 

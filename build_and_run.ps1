@@ -1,10 +1,7 @@
-$version = "dev" 
-$commit = git rev-parse --short HEAD
-$date = Get-Date -format "yyyy-MM-ddTHH:mm:ss"
+go build .
 
-go build -ldflags "-X 'main.version=$version' -X 'main.commit=$commit' -X 'main.date=$date'" .
-
-# goreleaser build --clean
+git describe --tags --abbrev=0
 
 ./CodeWeaver -version
+
 ./CodeWeaver -ignore="\.git.*,.+\.exe,codebase.md,excluded_paths.txt" -excluded-paths-file="excluded_paths.txt"
