@@ -9,6 +9,11 @@ builds:
       - linux
       - windows
       - darwin
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
 
 archives:
   - format: tar.gz
@@ -31,9 +36,6 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-
-ldflags:
-  -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser
 
 release:
   footer: >-
