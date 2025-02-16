@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io/fs"
@@ -8,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/go-git/go-git/v5"
 )
 
 var version = "v0.0.8"
@@ -19,6 +22,7 @@ func main() {
 	ignorePatterns := flag.String("ignore", `\.git.*`, "Comma-separated list of regular expression patterns that match the paths to be ignored")
 	includedPathsFile := flag.String("included-paths-file", "", "File to save included paths (optional). If provided, the included paths will be saved to the file and not printed to the console.")
 	excludedPathsFile := flag.String("excluded-paths-file", "", "File to save excluded paths (optional). If provided, the excluded paths will be saved to the file and not printed to the console.")
+	respectGitIgnore := flag.Bool("respect-git-ignore", false, "If true, the git ignore file will be respected and the respective paths will be ignored.")
 	showVersion := flag.Bool("version", false, "Show version and exit")
 	showHelp := flag.Bool("help", false, "Show help message and exit")
 
@@ -39,11 +43,34 @@ func main() {
 	ignoreListString := strings.Split(*ignorePatterns, ",")
 	ignoreList := make([]*regexp.Regexp, len(ignoreListString))
 
+	if *respectGitIgnore {
+		// Check if we are in a git repository
+		repo, err := git.PlainOpen(".")
+		if err != nil {
+			fmt.Println("Not a git repository:", err)
+		} else {
+			// Get the .gitignore patterns
+			_, err := repo.Worktree()
+			if err != nil {
+				fmt.Println("Error accessing worktree:", err)
+			} else {
+				// Read .gitignore files from the repository
+				gitIgnorePatterns, err := readGitIgnorePatterns()
+				if err != nil {
+					fmt.Println("Error reading .gitignore files:", err)
+				} else {
+					for _, pattern := range gitIgnorePatterns {
+						ignoreList = append(ignoreList, regexp.MustCompile(pattern))
+					}
+				}
+			}
+		}
+	}
+
 	fmt.Println("Patterns to ignore:")
 	for i, pattern := range ignoreListString {
 		fmt.Println(ignoreListString[i])
 		ignoreList[i] = regexp.MustCompile(strings.TrimSpace(pattern))
-
 	}
 
 	// Create the output file
@@ -227,4 +254,37 @@ func savePathsToFile(filename string, paths []string) error {
 	}
 
 	return nil
+}
+
+// readGitIgnorePatterns reads .gitignore files and returns a list of patterns
+func readGitIgnorePatterns() ([]string, error) {
+	var patterns []string
+	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			gitIgnorePath := filepath.Join(path, ".gitignore")
+			if _, err := os.Stat(gitIgnorePath); err == nil {
+				file, err := os.Open(gitIgnorePath)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+
+				scanner := bufio.NewScanner(file)
+				for scanner.Scan() {
+					line := strings.TrimSpace(scanner.Text())
+					if line != "" && !strings.HasPrefix(line, "#") {
+						patterns = append(patterns, line)
+					}
+				}
+				if err := scanner.Err(); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+	return patterns, err
 }
